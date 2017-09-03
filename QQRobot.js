@@ -11,7 +11,7 @@ const request = require('request');
 
 const xuiUrl = `https://xui.ptlogin2.qq.com/cgi-bin/xlogin?daid=164&target=self&style=40&mibao_css=m_webqq&appid=501004106&enable_qlogin=0&no_verifyimg=1&s_url=http%3A%2F%2Fw.qq.com%2Fproxy.html&f_url=loginerroralert&strong_login=1&login_state=10&t=20131024001`;
 const targetUrl = 'https://ssl.ptlogin2.qq.com/ptqrshow?appid=501004106&e=2&l=M&s=3&d=72&v=4&t=0.0426060950619096&daid=164';
-const tulingKey = 'aef48c4854c645c6b7990c1f55974fb8';
+const tulingKey = '';
 
 // cookies
 let j = request.jar();
