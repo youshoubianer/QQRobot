@@ -4,8 +4,6 @@
 
 'use strict'
 
-const co = require('co');
-const _ = require('lodash');
 const getPixels = require("get-pixels");
 const request = require('request');
 
@@ -97,6 +95,9 @@ function getLoginQr() {
     return showQr(res.data, {
       type: res.type
     });
+  }).catch(function (error) {
+    console.log('getLoginQr error\n', error)
+    return reject(error);
   })
 }
 
@@ -175,7 +176,6 @@ function cookieParser(cookieString) {
  * @param {*} callback 
  */
 function pollingLoginState(callback) {
-  let cnt = 0;
   let interval = 1000;
   let pollingUrl = `https://ssl.ptlogin2.qq.com/ptqrlogin?u1=http%3A%2F%2Fw.qq.com%2Fproxy.html&ptqrtoken=${ hash33(cookies.qrsig) }&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-${new Date().getTime()}&js_ver=10228&js_type=1&login_sig=6aGHIoWaY9ZB38I3uoCgAAmeh9m7Nu*0iWa6H8EIBP2Pu3xzTQk1kvXElCN9LFhS&pt_uistyle=40&aid=501004106&daid=164&mibao_css=m_webqq&`
 
@@ -196,10 +196,10 @@ function pollingLoginState(callback) {
         return resolve(body)
       });
     }).then(function (res) {
-      console.log(res);
       res = res.split(',');
       let scanCode = res[0].slice(8, -1);
       let scanMsg = res[4].slice(1, -1);
+      console.log('-->', scanMsg);
       if (scanCode == '0') {
         clearInterval(polling);
         let cookieString = j.getCookieString(pollingUrl);
@@ -218,13 +218,12 @@ function pollingLoginState(callback) {
  * @param {*} checkSigUrl 
  */
 function checkSig(checkSigUrl) {
-
   return new Promise(function (resolve, reject) {
     request({
       url: checkSigUrl,
       jar: j,
     }, function (error, resp, body) {
-      console.log('checkSig\t-->', resp.statusCode);
+      console.log('--> checkSig', resp.statusCode);
       if (error) {
         console.log(error)
         return reject(error);
@@ -258,7 +257,7 @@ function getvfwebqq() {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
       }
     }, function (error, resp, body) {
-      console.log('getvfwebqq\t-->', resp.statusCode);
+      console.log('--> getvfwebqq', resp.statusCode);
 
       if (error) {
         console.log(error)
@@ -266,7 +265,7 @@ function getvfwebqq() {
       }
       let respBody = JSON.parse(body);
       if (respBody.retcode != 0) {
-        throw new Error('get vfwebqq error!\t<--')
+        return reject('get vfwebqq error!')
       }
       let vfwebqq = respBody.result.vfwebqq;
       parameters.vfwebqq = vfwebqq;
@@ -304,16 +303,19 @@ function login2() {
         })
       },
     }, function (error, resp, body) {
-      console.log('login2\t-->', resp.statusCode);
+      console.log('--> login2', resp.statusCode);
       if (error) {
         console.log(error)
         return reject(error);
       }
       let respBody = JSON.parse(body);
       if (respBody.retcode != 0) {
-        throw new Error('post login2 error!\t<--')
+        return reject('post login2 error!')
       }
       parameters.login2 = respBody.result;
+
+      console.log('\n=============== cookies ============\n', JSON.stringify(cookies, null, 2));
+      console.log('\n=============== parameters ============\n', JSON.stringify(parameters, null, 2));
       return resolve(respBody)
     });
   })
@@ -328,8 +330,8 @@ function getUserFriends() {
     respBody.result.info.map(item => {
       friends[item.uin] = item;
     });
-    console.log('get friends:', friends)
-  }).catch(error => {
+    console.log('=============== friends =============\n', JSON.stringify(friends, null, 2));
+  }).catch(function (error) {
     console.log(error)
   })
 }
@@ -343,8 +345,8 @@ function getGroups() {
     respBody.result.gnamelist.map(item => {
       groups[item.gid] = item;
     });
-    console.log('get groups:', groups)
-  }).catch(error => {
+    console.log('=============== groups =============\n', JSON.stringify(groups, null, 2));
+  }).catch(function (error) {
     console.log(error)
   })
 }
@@ -369,24 +371,23 @@ function getDiscuss() {
         'Origin': 'http://s.web2.qq.com',
       },
     }, function (error, resp, body) {
-      console.log('getDiscuss\t-->', resp.statusCode);
+      console.log('\n--> getDiscuss', resp.statusCode);
       if (error) {
-        console.log(error)
+        console.log(error);
         return reject(error);
       }
       let respBody = JSON.parse(body);
       if (respBody.retcode != 0) {
-        return reject('get discuss error! retcode:', respBody.retcode)
+        return reject('get discuss error! retcode:', respBody.retcode);
       }
       respBody.result.dnamelist.map(item => {
         discuss[item.did] = item;
       });
-      console.log('get discuss:', discuss)
-
+      console.log('=============== discuss =============\n', JSON.stringify(discuss, null, 2));
       return resolve()
     });
-  }).catch(error => {
-    console.log(error)
+  }).catch(function (error) {
+    console.log(error);
   })
 }
 
@@ -414,18 +415,18 @@ function getInfo(infonUrl) {
         })
       },
     }, function (error, resp, body) {
-      console.log('getInfo\t-->', resp.statusCode);
+      console.log('\n--> getInfo', resp.statusCode);
       if (error) {
-        console.log(error)
+        console.log(error);
         return reject(error);
       }
       let respBody = JSON.parse(body);
       if (respBody.retcode != 0) {
-        return reject('get info error! retcode:', respBody.retcode)
+        return reject('get info error! retcode:', respBody.retcode);
       }
       return resolve(respBody)
     });
-  }).catch(error => {
+  }).catch(function (error) {
     console.log(error)
   })
 }
@@ -451,19 +452,19 @@ function getSelfInfo() {
         'Origin': 'http://s.web2.qq.com',
       },
     }, function (error, resp, body) {
-      console.log('getselfInfo\t-->', resp.statusCode);
+      console.log('--> getselfInfo', resp.statusCode);
       if (error) {
-        console.log(error)
+        console.log(error);
         return reject(error);
       }
       let respBody = JSON.parse(body);
       if (respBody.retcode != 0) {
-        return reject('get selfInfo error! retcode:', respBody.retcode)
+        return reject('get selfInfo error! retcode:', respBody.retcode);
       }
       myselfInfo = respBody.result;
       return resolve()
     });
-  }).catch(error => {
+  }).catch(function (error) {
     console.log(error)
   })
 }
@@ -549,12 +550,12 @@ function poll2() {
         let result = respBody.result;
         handleMsg(result);
       } else {
-        console.log('--> no new message.')
+        console.log(body);
       }
       poll2();
     });
-  }).catch(error => {
-    console.log(error)
+  }).catch(function (error) {
+    console.log(error);
   })
 }
 
@@ -580,7 +581,6 @@ function handleMsg(messages) {
     } else {
       continue;
     }
-    console.log('content:', content);
     replyPromise.push(getReply(content, uin));
   }
 
@@ -652,7 +652,7 @@ function sendBuddyMsg(text, uin) {
     let item = `${key}=${cookies[key]}`;
     j.setCookie(item, sendBuddyMsgUrl);
   }
-  console.log('--> sendBuddyMsg')
+  console.log('<-- sendBuddyMsg...')
   return new Promise(function (resolve, reject) {
     let contentStyle = ['font', {
       'name': '宋体',
@@ -682,15 +682,14 @@ function sendBuddyMsg(text, uin) {
       },
     }, function (error, resp, body) {
       if (error) {
-        console.error('--> sendBuddyMsg error.\n', error)
+        console.error('<-- sendBuddyMsg error.\n', error)
         // return reject(error);
       }
-
       let respBody = JSON.parse(body);
-      console.log('--> sendBuddyMsg:', respBody.msg)
+      console.log('<-- sendBuddyMsg', respBody.msg)
       return resolve();
     });
-  }).catch(error => {
+  }).catch(function (error) {
     console.log(error)
   })
 }
@@ -704,6 +703,7 @@ function sendQunMsg(text, gid) {
     let item = `${key}=${cookies[key]}`;
     j.setCookie(item, sendQunMsgUrl);
   }
+  console.log('<-- sendQunMsg...');
   return new Promise(function (resolve, reject) {
     let contentStyle = ['font', {
       'name': '宋体',
@@ -733,16 +733,14 @@ function sendQunMsg(text, gid) {
       },
     }, function (error, resp, body) {
       if (error) {
-        console.error('--> sendDiscuissMsg error.\n', error)
+        console.error('<-- sendQunMsg error.\n', error)
         // return reject(error);
       }
-
       let respBody = JSON.parse(body);
-
-      console.log('--> sendDiscuissMsg:', respBody.msg || respBody.errmsg)
+      console.log('<-- sendQunMsg:', respBody.msg || respBody.errmsg)
       return resolve();
     });
-  }).catch(error => {
+  }).catch(function (error) {
     console.log(error)
   })
 }
@@ -756,7 +754,7 @@ function sendDiscuissMsg(text, did) {
     let item = `${key}=${cookies[key]}`;
     j.setCookie(item, sendDiscuissMsgUrl);
   }
-  console.log('--> sendDiscuissMsg')
+  console.log('<-- sendDiscuissMsg...');
   return new Promise(function (resolve, reject) {
     let contentStyle = ['font', {
       'name': '宋体',
@@ -786,15 +784,14 @@ function sendDiscuissMsg(text, did) {
       },
     }, function (error, resp, body) {
       if (error) {
-        console.error('--> sendDiscuissMsg error.\n', error)
+        console.error('<-- sendDiscuissMsg error.\n', error)
         // return reject(error);
       }
-
       let respBody = JSON.parse(body);
-      console.log('--> sendDiscuissMsg:', respBody.msg)
+      console.log('<-- sendDiscuissMsg:', respBody.msg)
       return resolve();
     });
-  }).catch(error => {
+  }).catch(function (error) {
     console.log(error)
   })
 }
@@ -803,7 +800,6 @@ function sendDiscuissMsg(text, did) {
 /**
  * 模块导出
  */
-
 exports.login = function () {
   return setCookies().then(function () {
     return getLoginQr()
